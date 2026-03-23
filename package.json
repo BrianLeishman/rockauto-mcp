@@ -8,18 +8,23 @@
   },
   "scripts": {
     "build": "tsc && chmod 755 build/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "start": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "files": [
     "build"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "agents": "^0.8.0",
     "cheerio": "^1.0.0",
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250319.0",
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
   }
 }
