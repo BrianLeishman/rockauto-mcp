@@ -1,0 +1,25 @@
+{
+  "name": "rockauto-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for searching RockAuto auto parts catalog",
+  "type": "module",
+  "bin": {
+    "rockauto-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "dev": "tsc --watch"
+  },
+  "files": [
+    "build"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "cheerio": "^1.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
