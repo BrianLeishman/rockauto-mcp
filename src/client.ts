@@ -53,6 +53,7 @@ export interface Part {
   partNumber: string;
   price: string;
   description: string;
+  catalogUrl: string;
   moreInfoUrl: string;
 }
 
@@ -60,6 +61,7 @@ export interface PartSearchResult {
   manufacturer: string;
   partNumber: string;
   description: string;
+  catalogUrl: string;
   moreInfoUrl: string;
 }
 
@@ -264,7 +266,7 @@ export class RockAutoClient {
   async getParts(partTypeUrl: string): Promise<Part[]> {
     const html = await this.fetch(partTypeUrl);
     const $ = cheerio.load(html);
-    return this.extractParts($);
+    return this.extractParts($, partTypeUrl);
   }
 
   async searchByPartNumber(partNumber: string): Promise<PartSearchResult[]> {
@@ -289,12 +291,13 @@ export class RockAutoClient {
     });
 
     const $ = cheerio.load(html);
-    const parts = this.extractParts($);
+    const parts = this.extractParts($, SEARCH_URL);
 
     return parts.map((p) => ({
       manufacturer: p.manufacturer,
       partNumber: p.partNumber,
       description: p.description,
+      catalogUrl: p.catalogUrl,
       moreInfoUrl: p.moreInfoUrl,
     }));
   }
@@ -344,25 +347,25 @@ export class RockAutoClient {
       (l) => ({ name: l.name, url: l.href })
     );
 
-    const parts = this.extractParts($);
+    const parts = this.extractParts($, url);
 
     return { navigation, parts };
   }
 
-  private extractParts($: cheerio.CheerioAPI): Part[] {
+  private extractParts($: cheerio.CheerioAPI, sourceUrl: string = ""): Part[] {
     const parts: Part[] = [];
 
     // Primary: tbody.listing-inner elements (desktop catalog pages)
     $("tbody.listing-inner").each((_i, el) => {
       const tbody = $(el);
-      const part = this.parsePartFromElement($, tbody);
+      const part = this.parsePartFromElement($, tbody, sourceUrl);
       if (part) parts.push(part);
     });
 
     // Fallback: tr-based patterns
     if (parts.length === 0) {
       $("tr.listing-inner-row, tr[id*='listingcontainer']").each((_i, el) => {
-        const part = this.parsePartFromElement($, $(el));
+        const part = this.parsePartFromElement($, $(el), sourceUrl);
         if (part) parts.push(part);
       });
     }
@@ -370,7 +373,7 @@ export class RockAutoClient {
     // Fallback: div-based patterns
     if (parts.length === 0) {
       $("div.listing-container").each((_i, el) => {
-        const part = this.parsePartFromElement($, $(el));
+        const part = this.parsePartFromElement($, $(el), sourceUrl);
         if (part) parts.push(part);
       });
     }
@@ -380,7 +383,8 @@ export class RockAutoClient {
 
   private parsePartFromElement(
     $: cheerio.CheerioAPI,
-    el: cheerio.Cheerio<any>
+    el: cheerio.Cheerio<any>,
+    catalogUrl: string = ""
   ): Part | null {
     const manufacturer =
       el.find("span.listing-final-manufacturer").first().text().trim() ||
@@ -428,12 +432,101 @@ export class RockAutoClient {
       partNumber,
       price: price || (tier ? `[${tier}]` : ""),
       description,
+      catalogUrl,
       moreInfoUrl: moreInfoLink.startsWith("http")
         ? moreInfoLink
         : moreInfoLink
           ? `${BASE_URL}${moreInfoLink}`
           : "",
     };
+  }
+
+  async searchParts(
+    make: string,
+    year: string,
+    model: string,
+    partType: string
+  ): Promise<{ parts: Part[]; catalogUrl: string }> {
+    // Get engines and pick the first one
+    const engines = await this.getEngines(make, year, model);
+    if (engines.length === 0) {
+      throw new Error(`No engines found for ${year} ${make} ${model}`);
+    }
+
+    const needle = partType.toLowerCase();
+
+    // Search across all engines
+    for (const engine of engines) {
+      const categories = await this.getCategories(
+        make,
+        year,
+        model,
+        engine.description,
+        engine.carcode
+      );
+
+      // Find matching categories by keyword
+      const matches = categories.filter((c) =>
+        c.name.toLowerCase().includes(needle)
+      );
+
+      for (const category of matches) {
+        // Drill into subcategories until we find parts
+        const found = await this.drillForParts(category.url, needle);
+        if (found.parts.length > 0) return found;
+      }
+    }
+
+    // If no exact category match, try browsing all categories for a keyword match in subcategories
+    const engine = engines[0];
+    const categories = await this.getCategories(
+      make,
+      year,
+      model,
+      engine.description,
+      engine.carcode
+    );
+
+    for (const category of categories) {
+      const subs = await this.getSubcategories(category.url);
+      const subMatches = subs.filter((s) =>
+        s.name.toLowerCase().includes(needle)
+      );
+      for (const sub of subMatches) {
+        const found = await this.drillForParts(sub.url, needle);
+        if (found.parts.length > 0) return found;
+      }
+    }
+
+    throw new Error(
+      `No parts found matching "${partType}" for ${year} ${make} ${model}. Try a different search term (e.g. "brake pad", "oil filter", "alternator").`
+    );
+  }
+
+  private async drillForParts(
+    url: string,
+    needle: string
+  ): Promise<{ parts: Part[]; catalogUrl: string }> {
+    const result = await this.browseByUrl(url);
+
+    if (result.parts.length > 0) {
+      return { parts: result.parts, catalogUrl: url };
+    }
+
+    // Try subcategories that match the keyword, or all if none match
+    const matching = result.navigation.filter((n) =>
+      n.name.toLowerCase().includes(needle)
+    );
+    const toTry = matching.length > 0 ? matching : result.navigation;
+
+    for (const nav of toTry) {
+      const sub = await this.browseByUrl(nav.url);
+      if (sub.parts.length > 0) {
+        return { parts: sub.parts, catalogUrl: nav.url };
+      }
+    }
+
+    return { parts: [], catalogUrl: url };
   }
 
   private slugify(text: string): string {

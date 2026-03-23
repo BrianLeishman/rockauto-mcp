@@ -318,6 +318,51 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
+    "search_parts",
+    {
+      title: "Search Parts by Vehicle and Type",
+      description:
+        'Search for parts by vehicle and part type in one step. Automatically navigates the catalog hierarchy to find matching parts. Use simple part type keywords like "brake pad", "oil filter", "alternator", "spark plug", etc. Returns parts with direct RockAuto catalog links.',
+      inputSchema: {
+        make: z.string().describe('Vehicle make, e.g. "Honda", "Toyota", "Ford"'),
+        year: z.string().describe('Model year, e.g. "2020"'),
+        model: z.string().describe('Vehicle model, e.g. "Civic", "Camry", "F-150"'),
+        partType: z
+          .string()
+          .describe(
+            'Part type to search for, e.g. "brake pad", "oil filter", "alternator", "spark plug", "strut"'
+          ),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ make, year, model, partType }) => {
+      try {
+        const result = await client.searchParts(make, year, model, partType);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  catalogUrl: result.catalogUrl,
+                  parts: result.parts,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (e: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.registerTool(
     "get_part_details",
     {
       title: "Get Part Details",

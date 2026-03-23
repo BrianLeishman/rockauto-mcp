@@ -65,6 +65,7 @@ Once connected, try asking your AI assistant:
 | `list_categories` | List part categories for a vehicle + engine |
 | `browse_category` | Browse subcategories or parts at a catalog URL |
 | `get_parts` | Get parts listed on a catalog page |
+| `search_parts` | Search by vehicle + part type in one step (e.g. "brake pad") |
 | `search_part_number` | Search by part number (supports `*` wildcards) |
 | `get_part_details` | Get detailed specs for a specific part |
 
