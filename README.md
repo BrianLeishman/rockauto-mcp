@@ -7,14 +7,14 @@ An MCP (Model Context Protocol) server that lets AI assistants search the [RockA
 A hosted instance is available — no install required:
 
 ```
-https://rockauto-mcp.b-a92.workers.dev/sse
+https://rockauto-mcp.b-a92.workers.dev/mcp
 ```
 
 ### ChatGPT
 
 1. Open [ChatGPT](https://chatgpt.com) and go to **Settings** > **Connected apps** ([docs](https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta))
 2. Click **Add connection** and select **MCP**
-3. Paste the URL: `https://rockauto-mcp.b-a92.workers.dev/sse`
+3. Paste the URL: `https://rockauto-mcp.b-a92.workers.dev/mcp`
 4. Save
 
 ### Claude Code
@@ -22,7 +22,7 @@ https://rockauto-mcp.b-a92.workers.dev/sse
 Run this in your terminal:
 
 ```bash
-claude mcp add rockauto --transport sse https://rockauto-mcp.b-a92.workers.dev/sse
+claude mcp add rockauto --transport sse https://rockauto-mcp.b-a92.workers.dev/mcp
 ```
 
 See the [Claude Code MCP docs](https://code.claude.com/docs/en/mcp.md) for more options.
@@ -35,7 +35,7 @@ Add to your `claude_desktop_config.json` ([docs](https://modelcontextprotocol.io
 {
   "mcpServers": {
     "rockauto": {
-      "url": "https://rockauto-mcp.b-a92.workers.dev/sse"
+      "url": "https://rockauto-mcp.b-a92.workers.dev/mcp"
     }
   }
 }
@@ -92,7 +92,7 @@ claude mcp add rockauto -- node /absolute/path/to/rockauto-mcp/build/index.js
 npm run deploy
 ```
 
-This gives you your own SSE endpoint at `https://rockauto-mcp.<your-subdomain>.workers.dev/sse`.
+This gives you your own endpoint at `https://rockauto-mcp.<your-subdomain>.workers.dev/mcp`.
 
 ### Local Development
 
